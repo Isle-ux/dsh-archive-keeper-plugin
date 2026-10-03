@@ -60,23 +60,59 @@ usage, and you can restore individual items or empty it.
 
 ### 6. Live counters
 
-Next to the "Archive Keeper" button in the conversation header you will see three numbers:
+Next to the "Archive Keeper" button in the conversation header you will see four numbers:
 
 ```
-归档总数 17 · 已提炼 16 · 待提炼 1
-(17 archived · 16 digested · 1 pending)
+归档总数 19 · 已提炼 17 · 无法提炼 2 · 待提炼 0
+(19 archived · 17 digested · 2 unprocessable · 0 pending)
 ```
 
-They are always self-consistent (`archived = digested + pending`) and they track **which archived
-sessions still exist right now**:
+They are always self-consistent (`archived = digested + unprocessable + pending`) and they track
+**which archived sessions still exist right now**:
 
 - Un-archive a session → the archived count drops immediately
 - A digest file is deleted → the digested count drops and pending rises
+- The source session file is gone from disk, or extraction definitively failed → counted as
+  "unprocessable" and never retried automatically
 - While a run is in progress, `· 提炼中…` (extracting) is appended
 
 ---
 
 ## Changelog
+
+### v1.2.0
+
+**Three bugs fixed, plus one hidden crash:**
+
+1. **Already-processed sessions are no longer retried forever.**
+   Some sessions can **never** be extracted — the source file was deleted from disk (`missing`), or
+   extraction genuinely failed (`error`). The old rule was "anything that isn't `ok` is pending", so
+   these dead entries were **re-selected on every run**, the pending count never reached zero, and
+   the UI looked frozen. They are now marked **terminal** and skipped:
+
+   - Their count is shown separately as "unprocessable", no longer mixed into "pending"
+   - Every run states how many were skipped and why
+   - To retry on purpose, pass `--retry-failed` (CLI); there is no automatic retry
+
+2. **Extraction log is now written to disk.**
+   `state/keeper.log` records each run, each session's outcome, skip reasons, and the tail of the
+   output when the child process exits abnormally. No more reproducing by hand to debug.
+   The log rotates automatically past 1 MB, keeping the last 2000 lines.
+
+3. **Truncated model output no longer wastes a whole run.**
+   Model replies are occasionally cut off by the length limit — a missing `}`, half an array — and
+   `JSON.parse` then fails, marking the session as `error`. Now the incomplete JSON is **repaired and
+   re-parsed**: whatever fields can be recovered are kept (e.g. the summary and the key points listed
+   so far), and only genuinely unrecoverable output fails.
+   > Bailing out is deliberate in one case: if the truncation lands in the middle of a string value,
+   > stitching it back together yields a half-sentence summary, which misleads more than having none —
+   > so that case is always rejected.
+
+4. **Fixed a hidden `ReferenceError` in `extract.cjs`.**
+   When session metadata was missing it threw `file is not defined` (`file` is another function's
+   parameter and not in that scope), guaranteeing failure for that session. Real sessions carry the
+   id at the top level of the event, so the path was never hit in practice — the worst kind of bug:
+   unavoidable when triggered, and very hard to trace. Fixed as well.
 
 ### v1.1.0
 
@@ -118,14 +154,14 @@ Grab `dsh-archive-keeper-<version>.tgz` from the
 locally:
 
 ```bash
-npm i ./dsh-archive-keeper-1.1.0.tgz
+npm i ./dsh-archive-keeper-1.2.0.tgz
 ```
 
 Each release also ships a `.sha256` checksum so you can confirm the download is intact:
 
 ```bash
-sha256sum -c dsh-archive-keeper-1.1.0.tgz.sha256        # Linux / macOS
-certutil -hashfile dsh-archive-keeper-1.1.0.tgz SHA256  # Windows
+sha256sum -c dsh-archive-keeper-1.2.0.tgz.sha256        # Linux / macOS
+certutil -hashfile dsh-archive-keeper-1.2.0.tgz SHA256  # Windows
 ```
 
 ### Option 3: clone the source
