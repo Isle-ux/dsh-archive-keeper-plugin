@@ -89,6 +89,54 @@ plugins). This package **bundles all runtime code** — no extra dependencies to
 > different requirements for plugin manifests (e.g. the `dsh.client` field format), you may need
 > to adjust `package.json` for your version.
 
+### Compatibility with other plugins
+
+**Short answer: this plugin does not conflict with other plugins.** The reason is that DSH's slot
+mechanism is built for coexistence — here are the exact boundaries, and the single case that
+would actually break.
+
+**① The slot is a *list*, designed for side-by-side entries**
+
+`conversation.session.header.utilities` is a `kind: "list"` slot, meaning it accepts **multiple**
+registrations and renders them in `priority` → `order` sequence. It is not an exclusive
+"one-plugin-only" seat.
+
+**The only way to conflict** is if another plugin registers into the **same slot with an identical
+`id` *and* the same `priority`**. In that case DSH throws outright:
+
+```
+list slot "..." already has an entry with id "..." (registered by ...)
+```
+
+This plugin's ids are namespaced, so they will not collide with common plugins. In practice this
+case does not arise.
+
+**② You do not have to choose between this plugin and your other plugins**
+
+If your DSH also has other plugins that add buttons to the conversation header (usage stats, model
+switchers, and so on), they render **alongside** Archive Keeper rather than replacing it. The
+author's machine runs 12 plugins at once (several with client-side UI), and there is no
+registration conflict on this plugin's slot.
+
+**③ One known slot conflict, unrelated to this plugin (for reference)**
+
+On the author's machine, `@ychris12138/dsh-usage-stats` and `@changfenhuang/dsh-genui` both
+register into `panel.badge`. That is between those two plugins and has nothing to do with Archive
+Keeper — it is mentioned only as an example of what a slot conflict looks like.
+
+**④ What I cannot guarantee (stated honestly)**
+
+- **Slot names may differ across DSH versions.** `conversation.session.header.utilities` is the
+  slot name in the author's version (0.2.0-rc.2). If your DSH version does not declare that slot,
+  the client half will **not error — it simply will not appear**. The host half (digesting, routes,
+  trash) keeps working regardless.
+- **This plugin has not been tested across all DSH versions.** It was verified only in the author's
+  desktop environment (full 12-plugin stack, real browser, 0 errors). If you hit a problem, please
+  open an Issue with your DSH version number.
+- **No version constraint is declared.** I could not find official DSH plugin-spec documentation,
+  so `package.json` carries no `dsh` version range. If loading fails on your version, it is most
+  likely a manifest field difference — adjust it for your version.
+
 ---
 
 ## Configuration
