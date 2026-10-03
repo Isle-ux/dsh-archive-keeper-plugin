@@ -79,13 +79,15 @@ plugins). This package **bundles all runtime code** — no extra dependencies to
 
 ### Compatibility
 
+- **Developed and verified against DSH `0.2.0-rc.2`** (desktop / Windows 11). The plugin passes
+  full verification on that version.
 - **Desktop / web only.** The client half registers into the
   `conversation.session.header.utilities` slot, which only hosts with a conversation view
   declare. In headless, TUI and similar hosts the plugin simply does not activate.
 - Requires Node.js ≥ 20.
 - The digest step calls a model, so you need a working model route configured in DSH.
 
-> ⚠️ This plugin was developed against the author's local DSH version. If your DSH version has
+> ⚠️ This plugin was developed against DSH `0.2.0-rc.2`. If your DSH version has
 > different requirements for plugin manifests (e.g. the `dsh.client` field format), you may need
 > to adjust `package.json` for your version.
 
@@ -127,12 +129,12 @@ Keeper — it is mentioned only as an example of what a slot conflict looks like
 **④ What I cannot guarantee (stated honestly)**
 
 - **Slot names may differ across DSH versions.** `conversation.session.header.utilities` is the
-  slot name in the author's version (0.2.0-rc.2). If your DSH version does not declare that slot,
+  slot name in DSH `0.2.0-rc.2`. If your DSH version does not declare that slot,
   the client half will **not error — it simply will not appear**. The host half (digesting, routes,
   trash) keeps working regardless.
-- **This plugin has not been tested across all DSH versions.** It was verified only in the author's
-  desktop environment (full 12-plugin stack, real browser, 0 errors). If you hit a problem, please
-  open an Issue with your DSH version number.
+- **This plugin has not been tested across all DSH versions.** It was verified only on DSH
+  `0.2.0-rc.2` (Windows 11 desktop) — full 12-plugin stack, real browser, 0 errors. If you hit a
+  problem, please open an Issue with your DSH version number.
 - **No version constraint is declared.** I could not find official DSH plugin-spec documentation,
   so `package.json` carries no `dsh` version range. If loading fails on your version, it is most
   likely a manifest field difference — adjust it for your version.
