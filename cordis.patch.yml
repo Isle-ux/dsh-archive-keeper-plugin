@@ -1,0 +1,22 @@
+# dsh-archive-keeper bundle patch.
+#
+# 这个包是纯增量：只 insert 自己的宿主行，不覆盖任何已发布的 row。
+# 宿主半边（lib/index.js）做两件事：
+#   1. 轮询 workspace.json 的归档列表，出现新归档就自动调起提炼流程；
+#   2. 通过 webServer 暴露 /archive-keeper/* 路由，供视图读写。
+#
+# 界面半边由 package.json 的 `dsh.client` 清单加载（浏览器端），
+# 它注册进 `conversation.session.header.utilities` 座位 ——
+# 对话头部右侧的工具条，也就是「归档守护」按钮所在的位置。
+# 该座位只在桌面版 / 网页版这类带对话区的宿主里存在，其它宿主自然不激活。
+
+- insert:
+    - id: archive-keeper
+      name: 'dsh-archive-keeper'
+      config:
+        # 用户数据根目录（摘要 / 选择 / 回收站都写在这里）。
+        # 留空则用默认值：
+        #   <用户目录>\Documents\deepseek-harness\archive-keeper
+        root: ''
+        # 归档列表轮询间隔（毫秒）。30 秒足够及时，开销可忽略。
+        pollMs: 30000

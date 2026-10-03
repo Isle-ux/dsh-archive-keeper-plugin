@@ -1,0 +1,49 @@
+{
+  "name": "dsh-archive-keeper",
+  "version": "0.1.0",
+  "description": "归档守护：DSH 会话归档后自动提炼要点，并在对话头部加一个「归档守护」视图，由你自己决定每条归档的去留（保留原文 / 只留摘要 / 彻底删除，删除可恢复）。仅桌面版 / 网页版生效。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": { "default": "./lib/index.js" },
+    "./client": { "default": "./lib/client.js" },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "archive",
+    "digest",
+    "session"
+  ],
+  "license": "MIT",
+  "author": "Isle-ux",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Isle-ux/dsh-archive-keeper-plugin.git"
+  },
+  "homepage": "https://github.com/Isle-ux/dsh-archive-keeper-plugin#readme",
+  "bugs": {
+    "url": "https://github.com/Isle-ux/dsh-archive-keeper-plugin/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": ["@deepseek-ai/dsh-client-runtime"],
+      "platform": "web",
+      "immediately": true
+    }
+  }
+}

@@ -1,0 +1,17 @@
+# 依赖与构建产物
+node_modules/
+dist/
+*.log
+
+# 用户数据（绝不应提交）
+state/
+digests/
+trash/
+*.json.bak
+*.bak-*
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
