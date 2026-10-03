@@ -3,6 +3,10 @@ node_modules/
 dist/
 *.log
 
+# npm pack 产物（作为 Release 附件分发，不进版本库）
+*.tgz
+*.tgz.sha256
+
 # 用户数据（绝不应提交）
 state/
 digests/

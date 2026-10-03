@@ -103,17 +103,38 @@ First stable release.
 
 ## Install
 
-Install straight from GitHub:
+Three options — pick any one.
+
+### Option 1: install straight from GitHub (recommended)
 
 ```bash
 npm i github:Isle-ux/dsh-archive-keeper-plugin
 ```
 
-Or clone it and link the directory into your profile's `node_modules`:
+### Option 2: download the tarball from Releases
+
+Grab `dsh-archive-keeper-<version>.tgz` from the
+[Releases](https://github.com/Isle-ux/dsh-archive-keeper-plugin/releases) page, then install it
+locally:
+
+```bash
+npm i ./dsh-archive-keeper-1.1.0.tgz
+```
+
+Each release also ships a `.sha256` checksum so you can confirm the download is intact:
+
+```bash
+sha256sum -c dsh-archive-keeper-1.1.0.tgz.sha256        # Linux / macOS
+certutil -hashfile dsh-archive-keeper-1.1.0.tgz SHA256  # Windows
+```
+
+### Option 3: clone the source
 
 ```bash
 git clone https://github.com/Isle-ux/dsh-archive-keeper-plugin.git
 ```
+
+---
 
 Then add the plugin to your profile's `dsh.profile.bundles` (or however your DSH version loads
 plugins). This package **bundles all runtime code** — no extra dependencies to install.

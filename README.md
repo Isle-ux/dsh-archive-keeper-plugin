@@ -91,19 +91,39 @@ DSH 的「归档」只改标记、不动磁盘。时间一长，`$DSH_HOME/sessi
 
 ## 安装
 
-直接从 GitHub 安装：
+有三种方式，任选其一。
+
+### 方式一：从 GitHub 直接安装（推荐）
 
 ```bash
 npm i github:Isle-ux/dsh-archive-keeper-plugin
 ```
 
-或克隆到本地，再把目录链接进 profile 的 `node_modules`：
+### 方式二：下载 Release 里的压缩包
+
+到 [Releases](https://github.com/Isle-ux/dsh-archive-keeper-plugin/releases) 页面下载
+`dsh-archive-keeper-<版本>.tgz`，然后本地安装：
+
+```bash
+npm i ./dsh-archive-keeper-1.1.0.tgz
+```
+
+同一个 Release 里附有 `.sha256` 校验和，可用来核对下载是否完整：
+
+```bash
+sha256sum -c dsh-archive-keeper-1.1.0.tgz.sha256   # Linux / macOS
+certutil -hashfile dsh-archive-keeper-1.1.0.tgz SHA256   # Windows
+```
+
+### 方式三：克隆源码
 
 ```bash
 git clone https://github.com/Isle-ux/dsh-archive-keeper-plugin.git
 ```
 
-然后把插件加进 profile 的 `dsh.profile.bundles`（或按你的 DSH 版本的插件安装方式装载）。
+---
+
+装好后，把插件加进 profile 的 `dsh.profile.bundles`（或按你的 DSH 版本的插件安装方式装载）。
 本包**自带全部运行代码**，不需要额外安装运行时依赖。
 
 ### 兼容性
