@@ -1,6 +1,6 @@
 {
   "name": "dsh-archive-keeper",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "归档守护：DSH 会话归档后自动提炼要点，并在对话头部加一个「归档守护」视图，由你自己决定每条归档的去留（保留原文 / 只留摘要 / 彻底删除，删除可恢复）。仅桌面版 / 网页版生效。",
   "type": "module",
   "main": "lib/index.js",
