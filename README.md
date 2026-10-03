@@ -1,4 +1,4 @@
-﻿# dsh-archive-keeper（归档守护）
+# dsh-archive-keeper（归档守护）
 
 > [English](README.en.md) | 中文
 
@@ -126,7 +126,18 @@ DSH 的「归档」只改标记、不动磁盘。时间一长，`$DSH_HOME/sessi
 ### 方式一：从 GitHub 直接安装（推荐）
 
 ```bash
-npm i github:Isle-ux/dsh-archive-keeper-plugin
+npm i git+https://github.com/Isle-ux/dsh-archive-keeper-plugin.git
+```
+
+> ⚠️ **不要**写成 `npm i github:Isle-ux/dsh-archive-keeper-plugin`。
+> npm 会把 `github:` 简写改写成 **SSH**（`ssh://git@github.com/...`），
+> 没有配 SSH key 的机器会直接报 `Permission denied (publickey)`。
+> 用上面这种显式的 `git+https://` 形式走 HTTPS，任何人都能装。
+
+如果网络访问 GitHub 不稳，可改用镜像源：
+
+```bash
+npm i git+https://github.com/Isle-ux/dsh-archive-keeper-plugin.git --registry=https://registry.npmmirror.com
 ```
 
 ### 方式二：下载 Release 里的压缩包
@@ -137,6 +148,8 @@ npm i github:Isle-ux/dsh-archive-keeper-plugin
 ```bash
 npm i ./dsh-archive-keeper-1.2.0.tgz
 ```
+
+这种方式不依赖 GitHub 连通性，网络不好时最稳。
 
 同一个 Release 里附有 `.sha256` 校验和，可用来核对下载是否完整：
 

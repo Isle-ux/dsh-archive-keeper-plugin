@@ -144,7 +144,18 @@ Three options — pick any one.
 ### Option 1: install straight from GitHub (recommended)
 
 ```bash
-npm i github:Isle-ux/dsh-archive-keeper-plugin
+npm i git+https://github.com/Isle-ux/dsh-archive-keeper-plugin.git
+```
+
+> ⚠️ Do **not** use `npm i github:Isle-ux/dsh-archive-keeper-plugin`. npm rewrites the
+> `github:` shorthand to **SSH** (`ssh://git@github.com/...`), which fails with
+> `Permission denied (publickey)` on any machine without an SSH key. The explicit
+> `git+https://` form above goes over HTTPS and works for everyone.
+
+If GitHub is slow or flaky on your network, add a mirror registry:
+
+```bash
+npm i git+https://github.com/Isle-ux/dsh-archive-keeper-plugin.git --registry=https://registry.npmmirror.com
 ```
 
 ### Option 2: download the tarball from Releases
@@ -156,6 +167,9 @@ locally:
 ```bash
 npm i ./dsh-archive-keeper-1.2.0.tgz
 ```
+
+This route does not depend on GitHub connectivity, so it is the most reliable when the network
+is unstable.
 
 Each release also ships a `.sha256` checksum so you can confirm the download is intact:
 
