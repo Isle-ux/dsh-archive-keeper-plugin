@@ -1,0 +1,10 @@
+blank_issues_enabled: true
+
+contact_links:
+  - name: 📖 先看看 README
+    url: https://github.com/Isle-ux/dsh-archive-keeper-plugin#readme
+    about: 安装方式、配置项、安全边界、与其他插件的兼容性都写在这里。
+
+  - name: ❓ 「插件装了但界面不显示」先看这条
+    url: https://github.com/Isle-ux/dsh-archive-keeper-plugin#与其他插件的兼容性
+    about: 多半是 DSH 版本差异导致座位名不同 —— 这种情况下插件不会报错，只是不显示。
