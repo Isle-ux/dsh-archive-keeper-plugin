@@ -58,6 +58,47 @@ Click the **⚙** button to open the personalization panel:
 Everything deleted (transcripts and digests) is moved to `trash/` first. The panel shows trash
 usage, and you can restore individual items or empty it.
 
+### 6. Live counters
+
+Next to the "Archive Keeper" button in the conversation header you will see three numbers:
+
+```
+归档总数 17 · 已提炼 16 · 待提炼 1
+(17 archived · 16 digested · 1 pending)
+```
+
+They are always self-consistent (`archived = digested + pending`) and they track **which archived
+sessions still exist right now**:
+
+- Un-archive a session → the archived count drops immediately
+- A digest file is deleted → the digested count drops and pending rises
+- While a run is in progress, `· 提炼中…` (extracting) is appended
+
+---
+
+## Changelog
+
+### v1.1.0
+
+**Two bugs fixed:**
+
+1. **Clicking "Re-extract" after a run finished could freeze the UI.**
+   The host route reported "started" whether or not extraction had actually begun, so the client
+   waited forever; and the button neither greyed out nor blocked repeat clicks during a run. Now:
+
+   - During extraction the button reads "提炼中…" and is disabled; clicking it does nothing
+   - The host truthfully reports whether a run actually started, and the client reports accordingly
+   - Polling speeds up while a run is in progress and the button recovers as soon as it finishes
+
+2. **The archived / digested counters only ever accumulated history.**
+   Both numbers were derived from the all-time processed-session record, so they only grew and
+   could disagree with the visible list. They are now **live counts** based on the current archive
+   list, updating immediately when you un-archive a session or delete a digest.
+
+### v1.0.0
+
+First stable release.
+
 ---
 
 ## Install
