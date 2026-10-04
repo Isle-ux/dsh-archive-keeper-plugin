@@ -63,8 +63,8 @@ usage, and you can restore individual items or empty it.
 Next to the "Archive Keeper" button in the conversation header you will see four numbers:
 
 ```
-归档总数 19 · 已提炼 17 · 无法提炼 2 · 待提炼 0
-(19 archived · 17 digested · 2 unprocessable · 0 pending)
+归档总数 15 · 已提炼 15 · 无法提炼 0 · 待提炼 0
+(15 archived · 15 digested · 0 unprocessable · 0 pending)
 ```
 
 They are always self-consistent (`archived = digested + unprocessable + pending`) and they track
@@ -72,13 +72,76 @@ They are always self-consistent (`archived = digested + unprocessable + pending`
 
 - Un-archive a session → the archived count drops immediately
 - A digest file is deleted → the digested count drops and pending rises
-- The source session file is gone from disk, or extraction definitively failed → counted as
-  "unprocessable" and never retried automatically
+- The source session file is gone from disk → counted as "unprocessable" and never retried
 - While a run is in progress, `· 提炼中…` (extracting) is appended
+
+### 7. Extraction failures
+
+Extraction is **fully automatic**: archive a session and the plugin notices and starts on its own —
+there is **no button to click**.
+
+Transient failures (network timeouts, quota exhaustion) are **retried automatically, up to 3 times**.
+Only when every retry is exhausted does the session show up under **"提炼失败 N"** in the filter bar
+(red, and hidden entirely when there is nothing to show).
+
+Opening such a session shows the failure reason and timestamp, plus the single available action:
+**"删除" (Delete)**. These sessions never produced a digest, so deleting simply removes them from the
+archive list (recovery falls back to DSH's own `workspace.json` backup).
+
+> **Why is there no "re-refine" button?** v1.1.0 had one, but it could freeze the UI: the endpoint
+> behind it performed full disk I/O while the frontend polled it, and the two together locked up the
+> conversation view. v1.3.0 removes the button along with the `/run` and `/retry` routes behind it —
+> **removing the trigger rather than fixing the trigger**, so this class of freeze cannot recur.
 
 ---
 
 ## Changelog
+
+### v1.3.0
+
+**Extraction is now fully automatic, and the "re-refine" button is gone.**
+
+1. **Extraction no longer needs any manual action.**
+   Previously it only fired when the archive list *grew*, and the "re-refine" button was the only way
+   to catch up. Now: any change to the archive list triggers a check, and every startup does a
+   fallback sweep. **Archive a session and you are done — nothing else to click.**
+
+2. **The "re-refine" button is removed, along with the `/run` and `/retry` routes behind it.**
+   v1.1.0 claimed to fix the "clicking re-refine freezes the UI" bug, but that fix was symptomatic —
+   it only greyed the button out during a run, while the real cause was **the endpoint itself**:
+   full disk I/O, polled by the frontend. This release removes the trigger entirely, eliminating the
+   freeze structurally (see "Extraction failures" above).
+
+3. **Failures are retried automatically; "extraction failed" is only recorded once retries run out.**
+   A new `attempts` counter (max 3, tunable via `ARCHIVE_KEEPER_MAX_ATTEMPTS`). Before this, a single
+   failure marked the session `error` permanently with no further retries. Now:
+   - A failure that still has retries left **counts as "pending"**, so it does not bother you early
+   - Only after 3 attempts does it enter the separate "提炼失败" group (red; hidden when empty)
+   - That group offers exactly one action: **"删除" (Delete)**
+
+4. **Fixed "sessions kept as summary-only show as never extracted".**
+   The predicate changed from "state says ok" to **"state says ok, OR the digest file actually
+   exists"**. Previously "summary only" deleted the digest too, leaving those sessions with
+   `status: ok` but no digest and not counted as digested — the numbers could never reconcile
+   (observed as "15 archived / 11 digested", 4 stuck forever). Now it reads 15/15.
+
+5. **Sessions whose source is gone are cleaned up automatically.**
+   `missing` used to occupy the "unprocessable" counter forever. Now, once the source is confirmed
+   absent from disk, the session is removed from the archive list (disable with `--no-purge`).
+   **`error` is never purged** — these are two different states: one has nothing left to recover,
+   the other can still be retried.
+
+6. **The extraction prompt was rewritten, and the resulting points are markedly better.**
+   It now states the writing requirements explicitly (self-contained, concrete, useful, no invention,
+   no filler) and lists what to look for: user preferences and dislikes, corrections and complaints,
+   environment facts, technical decisions *with reasons*, absolute paths of deliverables, pitfalls
+   and their fixes, and unfinished items — with bad/good examples. On the same real session, the
+   points went from filler like "troubleshot an error and applied a fix" to 8 independently
+   readable conclusions carrying concrete paths and version numbers.
+
+7. **The "extraction failed" delete action has two layers of gating.**
+   The host requires the session to actually be in `error` state *and* to have exhausted its retries;
+   the keeper re-validates the state. Both must pass, so there is no arbitrary-delete backdoor.
 
 ### v1.2.0
 
@@ -93,6 +156,9 @@ They are always self-consistent (`archived = digested + unprocessable + pending`
    - Their count is shown separately as "unprocessable", no longer mixed into "pending"
    - Every run states how many were skipped and why
    - To retry on purpose, pass `--retry-failed` (CLI); there is no automatic retry
+
+   > ℹ️ Superseded by v1.3.0: failures are now retried automatically up to 3 times, and `--retry-failed`
+   > is what the scheduler invokes on every check. `missing` entries are auto-purged instead.
 
 2. **Extraction log is now written to disk.**
    `state/keeper.log` records each run, each session's outcome, skip reasons, and the tail of the
@@ -120,11 +186,16 @@ They are always self-consistent (`archived = digested + unprocessable + pending`
 
 1. **Clicking "Re-extract" after a run finished could freeze the UI.**
    The host route reported "started" whether or not extraction had actually begun, so the client
-   waited forever; and the button neither greyed out nor blocked repeat clicks during a run. Now:
+   waited forever; and the button neither greyed out nor blocked repeat clicks during a run.
+   The mitigation at the time was:
 
    - During extraction the button reads "提炼中…" and is disabled; clicking it does nothing
    - The host truthfully reports whether a run actually started, and the client reports accordingly
    - Polling speeds up while a run is in progress and the button recovers as soon as it finishes
+
+   > ⚠️ **That fix was incomplete** — the problem recurred before v1.3.0 (the endpoint did full disk
+   > I/O synchronously while the frontend polled it). v1.3.0 removes the button and the related
+   > routes entirely; treat v1.3.0's behaviour as authoritative.
 
 2. **The archived / digested counters only ever accumulated history.**
    Both numbers were derived from the all-time processed-session record, so they only grew and
