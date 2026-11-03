@@ -18,6 +18,10 @@ DSH 的「归档」只改标记、不动磁盘。时间一长，`$DSH_HOME/sessi
 
 概括 / 决定 / 事实 / 交付物 / 待办项 / 可作废项，并给出「是否值得留存」的判断。
 
+**每轮只提炼 1 条**（v1.4.0 起）。每条会话都要起一个 `dsh --profile headless` 子进程去调模型，
+一次跑一打就是一两分钟里持续有模型请求在飞、界面发不出消息。改成一条一轮后，每轮只占十几秒，
+中间留出间隔，你随时能插进来对话。积压 N 条就是 N 轮，总时长变长，但界面不再被堵。
+
 ### 2. 由你自己定去留
 
 对话头部右侧的「归档守护」面板里，每条归档都是一个可展开的卡片：
@@ -51,17 +55,18 @@ DSH 的「归档」只改标记、不动磁盘。时间一长，`$DSH_HOME/sessi
 
 ### 6. 实时计数
 
-对话头部的「归档守护」按钮旁显示四个数字：
+对话头部的「归档守护」按钮旁显示计数（方括号里的项只在非 0 时出现）：
 
 ```
-归档总数 15 · 已提炼 15 · 无法提炼 0 · 待提炼 0
+归档总数 15 · 已提炼 15 · 待提炼 0 · 提炼失败 0 · 无法提炼 0
 ```
 
-四者恒自洽（`归档总数 = 已提炼 + 无法提炼 + 待提炼`），并且**跟着当前还剩哪些归档会话实时变化**：
+它们恒自洽（`归档总数 = 已提炼 + 待提炼 + 提炼失败 + 无法提炼`），并且**跟着当前还剩哪些归档会话实时变化**：
 
 - 取消归档一个会话 → 归档总数立刻下降
 - 摘要被删掉 → 已提炼立刻下降、待提炼相应上升
 - 会话原文已从磁盘删除 → 计入「无法提炼」，不再反复重试
+- 自动重试用尽的失败会话 → 单独算「提炼失败」，不出现在「待提炼」里
 - 正在提炼时，数字后面会追加 `· 提炼中…`
 
 ### 7. 提炼失败
@@ -81,6 +86,41 @@ DSH 的「归档」只改标记、不动磁盘。时间一长，`$DSH_HOME/sessi
 ---
 
 ## 更新日志
+
+### v1.4.0
+
+**核心变化：提炼改成「一轮一条」，修掉自动触发的一处记账 bug。**
+
+1. **每轮只提炼 1 条会话，界面不再被模型请求堵住。**
+   以前一次 tick 会把所有待提炼会话连着跑完，每条都要起一个 headless 子进程调模型，
+   积压 5 条就是 70 多秒里持续有进程在抢模型，期间对话界面发不出消息。
+   现在宿主每轮只让 keeper 处理 1 条（`--max-items 1`），做完立刻释放锁退出，
+   剩下的交给 30 秒后的下一次 tick。显式的 `--all` / 全量入口不受影响。
+
+2. **本地就能判定的「跳过」不占处理额度。**
+   原文已不在磁盘、解压后没有事件这类情况**不调模型**，因此不该占用本轮额度。
+   漏了这点会让一条 missing 吃掉整轮额度，队列里夹几个 missing 后台就几乎不干活。
+
+3. **修掉「自动触发被跳过 → 那条会话永远卡在待提炼」。**
+   原先是「先记账，再启动提炼」：当次因为已有提炼在跑而被跳过时，账已经记上了，
+   归档列表又没变化，于是这次触发再也不会重来，只能等 30 秒后的兜底补跑 ——
+   表现就是日志里同一批会话被处理两次、中间只隔 30 秒。现在只有在**真正启动了提炼**
+   之后才记账；兜底补跑也改成按「还没落定的条数」判断，不再空转。
+
+4. **数据根可以用环境变量指定。**
+   `ARCHIVE_KEEPER_ROOT` 优先于内置默认值（`config.root` 仍然最高）。沙盒 / 镜像验证
+   可以把整个插件指向一个假数据根，不会碰到你的真实摘要与状态。
+
+5. **命令行补齐 `--max-items`，文档补齐 `--retry-failed` / `--no-purge`。**
+   自己跑 `node lib/keeper.cjs` 时也能限制单轮处理条数。
+
+6. **界面细节。**
+   - 计数行补上「提炼失败 N」，四点计数口径与分组完全对齐
+   - 筛选栏「已删除」按钮位置调整（提炼失败 → 值得留存 → 已删除）
+
+> 打包结构沿用 v1.3.0：CJS 模块（`state` / `keeper` / `extract` / `decisions` / `tags`）
+> 随包发布、从**插件自己的 `lib/`** 加载，并通过 `ARCHIVE_KEEPER_ROOT` 显式告知数据目录 ——
+> 装进 `node_modules` 后不会把用户数据写进插件安装目录。
 
 ### v1.3.0
 
@@ -204,7 +244,7 @@ npm i git+https://github.com/Isle-ux/dsh-archive-keeper-plugin.git --registry=ht
 `dsh-archive-keeper-<版本>.tgz`，然后本地安装：
 
 ```bash
-npm i ./dsh-archive-keeper-1.2.0.tgz
+npm i ./dsh-archive-keeper-1.4.0.tgz
 ```
 
 这种方式不依赖 GitHub 连通性，网络不好时最稳。
@@ -212,8 +252,8 @@ npm i ./dsh-archive-keeper-1.2.0.tgz
 同一个 Release 里附有 `.sha256` 校验和，可用来核对下载是否完整：
 
 ```bash
-sha256sum -c dsh-archive-keeper-1.2.0.tgz.sha256   # Linux / macOS
-certutil -hashfile dsh-archive-keeper-1.2.0.tgz SHA256   # Windows
+sha256sum -c dsh-archive-keeper-1.4.0.tgz.sha256   # Linux / macOS
+certutil -hashfile dsh-archive-keeper-1.4.0.tgz SHA256   # Windows
 ```
 
 ### 方式三：克隆源码
@@ -229,12 +269,12 @@ git clone https://github.com/Isle-ux/dsh-archive-keeper-plugin.git
 
 ### 兼容性
 
-- **开发与验证环境：DSH `0.2.0-rc.2`**（桌面版 / Windows 11）。本插件在该版本上完整验证通过。
+- **开发环境：DSH `0.2.0-rc.2`；现役运行 / 复验环境：DSH `0.2.1-rc.5`**（Windows 11 桌面版）。两个版本上都实际跑过。
 - 仅**桌面版 / 网页版**生效：界面半边注册在 `conversation.session.header.utilities` 座位，只有带对话区的宿主才声明这条座位；headless、tui 等宿主里插件不会激活。
 - 需要 Node.js ≥ 20。
 - 提炼步骤会调用模型，需要在 DSH 里配好可用的模型路由。
 
-> ⚠️ 本插件是按 DSH `0.2.0-rc.2` 开发的。如果你的 DSH 版本对插件清单有不同要求
+> ⚠️ 本插件最初按 DSH `0.2.0-rc.2` 开发，现在也在 `0.2.1-rc.5` 上运行。如果你的 DSH 版本对插件清单有不同要求
 > （比如 `dsh.client` 字段格式），可能需要按你的版本调整 `package.json`。
 
 ### 与其他插件的兼容性
@@ -264,7 +304,7 @@ list slot "..." already has an entry with id "..." (registered by ...)
 **④ 我无法保证的部分（诚实说明）**
 
 - **不同 DSH 版本的座位名可能不同。** `conversation.session.header.utilities` 是 DSH `0.2.0-rc.2` 的座位名。如果你的 DSH 版本没有这条座位，插件界面半边**不会报错，但也不会显示** —— 宿主半边（提炼、路由、回收站）仍然正常工作。
-- **我没有在所有 DSH 版本上测试过。** 本插件只在 DSH `0.2.0-rc.2`（Windows 11 桌面版）验证过 —— 完整 12 插件栈、真实浏览器、0 报错。如果你装了之后发现问题，欢迎提 Issue 并附上你的 DSH 版本号。
+- **我没有在所有 DSH 版本上测试过。** 本插件只在 DSH `0.2.0-rc.2` 与 `0.2.1-rc.5`（Windows 11 桌面版）验证过 —— 完整插件栈、真实浏览器、0 报错。如果你装了之后发现问题，欢迎提 Issue 并附上你的 DSH 版本号。
 - **没有声明版本约束。** 我没找到 DSH 官方的插件规范文档，所以 `package.json` 里没有写 `dsh` 的版本范围。如果你的版本装载失败，多半是清单字段格式差异，按你的版本调整即可。
 
 ---
@@ -275,6 +315,16 @@ list slot "..." already has an entry with id "..." (registered by ...)
 | --- | --- | --- |
 | `root` | `<用户目录>\Documents\deepseek-harness\archive-keeper` | 用户数据根目录（摘要、选择、回收站都写在这里） |
 | `pollMs` | `30000` | 归档列表轮询间隔（毫秒） |
+| `maxRetryAttempts` | `3` | 界面上「提炼失败」的判据：重试达到这个次数才算失败 |
+
+环境变量（可选）：
+
+| 变量 | 说明 |
+| --- | --- |
+| `ARCHIVE_KEEPER_ROOT` | 覆盖数据根（低于 `config.root`，高于内置默认） |
+| `ARCHIVE_KEEPER_BIN` | 指定 keeper 入口路径（沙盒验证时用，正常不需要） |
+| `ARCHIVE_KEEPER_MAX_ATTEMPTS` | keeper 侧实际重试次数上限，默认 `3`。**应与 `maxRetryAttempts` 一致**，否则界面和后台判断会错位 |
+| `ARCHIVE_KEEPER_PROFILE` | 提炼时使用的 headless profile 名 |
 
 > `root` 指向的是**你的数据目录**，与插件安装位置无关；升级或重装插件不会影响已有数据。
 
@@ -284,12 +334,19 @@ list slot "..." already has an entry with id "..." (registered by ...)
 
 | 方法 | 路径 | 作用 |
 | --- | --- | --- |
-| GET | `/archive-keeper/list` | 全部摘要 + 你的选择 + 原文是否还在 |
-| POST | `/archive-keeper/decide` | 记录保留原文 / 只留摘要 / 恢复原文 |
-| POST | `/archive-keeper/run` | 立即跑一次增量提炼 |
+| GET | `/archive-keeper/list` | 全部摘要 + 你的选择 + 原文 / 回收站情况 |
 | GET | `/archive-keeper/customize` | 读取标签与规则 |
-| POST | `/archive-keeper/tag` | 增删标签、手工打标签 |
+| POST | `/archive-keeper/tag` | 增删标签、给会话打 / 取消标签 |
 | POST | `/archive-keeper/rule` | 增删改收纳规则 / 自动打标签规则 |
+| POST | `/archive-keeper/decide` | 记录「保留原文 / 只留摘要」，并按需把原文移入回收站 |
+| POST | `/archive-keeper/restore` | 从回收站恢复原文 |
+| POST | `/archive-keeper/hard-delete` | 彻底删除：原文 + 摘要都进回收站，进入「已删除」 |
+| POST | `/archive-keeper/restore-deleted` | 从「已删除」恢复，回到被删前的状态 |
+| GET | `/archive-keeper/trash` | 回收站清单（供「清空」前确认） |
+| POST | `/archive-keeper/empty-trash` | 真删回收站（不可逆，需 `confirm: true`） |
+| POST | `/archive-keeper/drop-failed` | 把「提炼失败」的会话从归档列表移除 |
+
+> v1.3.0 起**没有** `/run` 与 `/retry`：提炼全自动，手工触发入口已连同按钮一起删除。
 
 ---
 
@@ -336,10 +393,13 @@ archive-keeper/
 ## 命令行（不走界面时）
 
 ```bash
-node lib/keeper.cjs            # 增量提炼新归档
-node lib/keeper.cjs --all      # 重跑全部
-node lib/keeper.cjs --no-llm   # 只抽取不调模型（离线自检）
-node lib/decisions.cjs list    # 看当前选择
+node lib/keeper.cjs                          # 增量提炼新归档
+node lib/keeper.cjs --all                    # 重跑全部
+node lib/keeper.cjs --retry-failed           # 连同失败过的一起重试
+node lib/keeper.cjs --max-items 1            # 只处理 1 条就退出（宿主每轮用的就是这个）
+node lib/keeper.cjs --no-llm                 # 只抽取不调模型（离线自检）
+node lib/keeper.cjs --no-purge               # 不自动清理「原文已删」的归档记录
+node lib/decisions.cjs list                  # 看当前选择
 ```
 
 ---

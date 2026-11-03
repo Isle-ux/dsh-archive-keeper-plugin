@@ -23,6 +23,12 @@ pipeline and compresses the whole session into structured notes:
 summary / decisions / facts / deliverables / open threads / obsolete items, plus a
 "worth keeping" judgement.
 
+**One session per run** (since v1.4.0). Every digest spawns a fresh `dsh --profile headless`
+child process for the model call; a dozen at once means a minute or two of continuous model
+traffic during which the conversation view cannot send anything. One per round keeps each round to
+about ten seconds, with gaps in between, so you can always cut in and keep chatting. A backlog of N
+sessions takes N rounds — longer overall, but the UI stays responsive.
+
 ### 2. You decide what stays
 
 Inside the "Archive Keeper" panel, every archived session is an expandable card:
@@ -60,19 +66,22 @@ usage, and you can restore individual items or empty it.
 
 ### 6. Live counters
 
-Next to the "Archive Keeper" button in the conversation header you will see four numbers:
+Next to the "Archive Keeper" button in the conversation header you will see the counters
+(items in brackets only appear when non-zero):
 
 ```
-归档总数 15 · 已提炼 15 · 无法提炼 0 · 待提炼 0
-(15 archived · 15 digested · 0 unprocessable · 0 pending)
+归档总数 15 · 已提炼 15 · 待提炼 0 · 提炼失败 0 · 无法提炼 0
+(15 archived · 15 digested · 0 pending · 0 failed · 0 unprocessable)
 ```
 
-They are always self-consistent (`archived = digested + unprocessable + pending`) and they track
+They are always self-consistent
+(`archived = digested + pending + failed + unprocessable`) and they track
 **which archived sessions still exist right now**:
 
 - Un-archive a session → the archived count drops immediately
 - A digest file is deleted → the digested count drops and pending rises
 - The source session file is gone from disk → counted as "unprocessable" and never retried
+- A failure whose retries are exhausted → counted as "failed", never as "pending"
 - While a run is in progress, `· 提炼中…` (extracting) is appended
 
 ### 7. Extraction failures
@@ -96,6 +105,47 @@ archive list (recovery falls back to DSH's own `workspace.json` backup).
 ---
 
 ## Changelog
+
+### v1.4.0
+
+**One session per run, plus a fix for a bookkeeping bug in the automatic trigger.**
+
+1. **Only one session is digested per round, so model traffic no longer blocks the UI.**
+   Previously a single tick ran every pending session back to back; each one spawns a headless
+   child process for the model call, so a backlog of five meant 70+ seconds of continuous model
+   traffic during which the conversation view could not send. Now the host lets keeper process
+   exactly one session (`--max-items 1`), which releases the lock and exits; the rest waits for
+   the next 30-second tick. Explicit `--all` / full runs are unaffected.
+
+2. **Skips decided locally no longer consume the per-round budget.**
+   A missing transcript or a session with no events never reaches the model, so it must not eat
+   the round's quota. Without this, one `missing` entry could swallow the whole round and the
+   background would barely make progress whenever a few of them sat in the queue.
+
+3. **Fixed "the automatic trigger got skipped, so that session stayed pending forever".**
+   The old order was *record first, launch second*: when a run was skipped because another digest
+   was already in flight, the key had already been recorded, the archive list had not changed, so
+   the trigger never came back — only the 30-second fallback sweep saved it, which is why the log
+   showed the same sessions processed twice 30 seconds apart. Now the key is only recorded after a
+   run **actually starts**, and the fallback sweep counts sessions that have not settled yet
+   instead of spinning on an empty queue.
+
+4. **The data root can be overridden by an environment variable.**
+   `ARCHIVE_KEEPER_ROOT` takes precedence over the built-in default (`config.root` still wins).
+   Sandbox / mirror verification can point the whole plugin at a fake data root and never touch
+   your real digests and state.
+
+5. **`--max-items` added to the CLI; `--retry-failed` / `--no-purge` documented.**
+   Running `node lib/keeper.cjs` yourself can cap a round the same way the host does.
+
+6. **UI details.**
+   - The counter line now includes "提炼失败 N", matching the grouping exactly
+   - The "已删除" (deleted) filter moved in the filter bar (failed → worth keeping → deleted)
+
+> Packaging is unchanged from v1.3.0: the CJS modules (`state` / `keeper` / `extract` /
+> `decisions` / `tags`) ship with the package and load from **the plugin's own `lib/`**, and the
+> data directory is passed explicitly via `ARCHIVE_KEEPER_ROOT` — so an install under
+> `node_modules` never writes user data into the package directory.
 
 ### v1.3.0
 
@@ -236,7 +286,7 @@ Grab `dsh-archive-keeper-<version>.tgz` from the
 locally:
 
 ```bash
-npm i ./dsh-archive-keeper-1.2.0.tgz
+npm i ./dsh-archive-keeper-1.4.0.tgz
 ```
 
 This route does not depend on GitHub connectivity, so it is the most reliable when the network
@@ -245,8 +295,8 @@ is unstable.
 Each release also ships a `.sha256` checksum so you can confirm the download is intact:
 
 ```bash
-sha256sum -c dsh-archive-keeper-1.2.0.tgz.sha256        # Linux / macOS
-certutil -hashfile dsh-archive-keeper-1.2.0.tgz SHA256  # Windows
+sha256sum -c dsh-archive-keeper-1.4.0.tgz.sha256        # Linux / macOS
+certutil -hashfile dsh-archive-keeper-1.4.0.tgz SHA256  # Windows
 ```
 
 ### Option 3: clone the source
@@ -262,15 +312,15 @@ plugins). This package **bundles all runtime code** — no extra dependencies to
 
 ### Compatibility
 
-- **Developed and verified against DSH `0.2.0-rc.2`** (desktop / Windows 11). The plugin passes
-  full verification on that version.
+- **Developed against DSH `0.2.0-rc.2`; running and re-verified on DSH `0.2.1-rc.5`**
+  (Windows 11 desktop). Both versions were actually exercised.
 - **Desktop / web only.** The client half registers into the
   `conversation.session.header.utilities` slot, which only hosts with a conversation view
   declare. In headless, TUI and similar hosts the plugin simply does not activate.
 - Requires Node.js ≥ 20.
 - The digest step calls a model, so you need a working model route configured in DSH.
 
-> ⚠️ This plugin was developed against DSH `0.2.0-rc.2`. If your DSH version has
+> ⚠️ This plugin was originally developed against DSH `0.2.0-rc.2` and now also runs on `0.2.1-rc.5`. If your DSH version has
 > different requirements for plugin manifests (e.g. the `dsh.client` field format), you may need
 > to adjust `package.json` for your version.
 
@@ -316,7 +366,7 @@ Keeper — it is mentioned only as an example of what a slot conflict looks like
   the client half will **not error — it simply will not appear**. The host half (digesting, routes,
   trash) keeps working regardless.
 - **This plugin has not been tested across all DSH versions.** It was verified only on DSH
-  `0.2.0-rc.2` (Windows 11 desktop) — full 12-plugin stack, real browser, 0 errors. If you hit a
+  `0.2.0-rc.2` and `0.2.1-rc.5` (Windows 11 desktop) — full plugin stack, real browser, 0 errors. If you hit a
   problem, please open an Issue with your DSH version number.
 - **No version constraint is declared.** I could not find official DSH plugin-spec documentation,
   so `package.json` carries no `dsh` version range. If loading fails on your version, it is most
@@ -330,6 +380,16 @@ Keeper — it is mentioned only as an example of what a slot conflict looks like
 | --- | --- | --- |
 | `root` | `<home>\Documents\deepseek-harness\archive-keeper` | User data root (digests, choices, trash) |
 | `pollMs` | `30000` | Archive list polling interval in milliseconds |
+| `maxRetryAttempts` | `3` | How many retries before the UI calls a session "failed" |
+
+Optional environment variables:
+
+| Variable | Description |
+| --- | --- |
+| `ARCHIVE_KEEPER_ROOT` | Overrides the data root (below `config.root`, above the built-in default) |
+| `ARCHIVE_KEEPER_BIN` | Explicit keeper entry path (sandbox verification only) |
+| `ARCHIVE_KEEPER_MAX_ATTEMPTS` | How many retries keeper actually performs, default `3`. **Keep it equal to `maxRetryAttempts`**, otherwise the UI and the background disagree |
+| `ARCHIVE_KEEPER_PROFILE` | headless profile name used for digests |
 
 > `root` points at **your data directory**, independent of where the plugin is installed.
 > Upgrading or reinstalling the plugin will not touch existing data.
@@ -340,12 +400,20 @@ Keeper — it is mentioned only as an example of what a slot conflict looks like
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| GET | `/archive-keeper/list` | All digests + your choices + whether the transcript still exists |
-| POST | `/archive-keeper/decide` | Record keep / summary-only / restore |
-| POST | `/archive-keeper/run` | Run an incremental digest pass now |
+| GET | `/archive-keeper/list` | All digests + your choices + transcript/trash status |
 | GET | `/archive-keeper/customize` | Read labels and rules |
-| POST | `/archive-keeper/tag` | Add/remove labels, label sessions manually |
+| POST | `/archive-keeper/tag` | Add/remove labels, label or unlabel sessions |
 | POST | `/archive-keeper/rule` | Add/update/remove admission and auto-label rules |
+| POST | `/archive-keeper/decide` | Record keep / summary-only, trashing the transcript as needed |
+| POST | `/archive-keeper/restore` | Restore a transcript from the trash |
+| POST | `/archive-keeper/hard-delete` | Delete both transcript and digest (into trash), moving to "deleted" |
+| POST | `/archive-keeper/restore-deleted` | Restore a "deleted" item to its previous state |
+| GET | `/archive-keeper/trash` | Trash listing (for confirming a purge) |
+| POST | `/archive-keeper/empty-trash` | Actually purge the trash (irreversible, needs `confirm: true`) |
+| POST | `/archive-keeper/drop-failed` | Remove a "failed" session from the archive list |
+
+> Since v1.3.0 there is **no** `/run` and no `/retry`: extraction is fully automatic and the manual
+> trigger was removed together with its button.
 
 ---
 
@@ -394,10 +462,13 @@ archive-keeper/
 ## CLI (without the UI)
 
 ```bash
-node lib/keeper.cjs            # incremental digest of new archives
-node lib/keeper.cjs --all      # re-run everything
-node lib/keeper.cjs --no-llm   # extract only, no model call (offline self-check)
-node lib/decisions.cjs list    # show current choices
+node lib/keeper.cjs                 # incremental digest of new archives
+node lib/keeper.cjs --all           # re-run everything
+node lib/keeper.cjs --retry-failed  # also retry previously failed sessions
+node lib/keeper.cjs --max-items 1   # stop after one session (what the host uses per round)
+node lib/keeper.cjs --no-llm        # extract only, no model call (offline self-check)
+node lib/keeper.cjs --no-purge      # do not auto-clean records whose transcript is gone
+node lib/decisions.cjs list         # show current choices
 ```
 
 ---
