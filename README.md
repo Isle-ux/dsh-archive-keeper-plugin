@@ -269,13 +269,16 @@ git clone https://github.com/Isle-ux/dsh-archive-keeper-plugin.git
 
 ### 兼容性
 
-- **开发环境：DSH `0.2.0-rc.2`；现役运行 / 复验环境：DSH `0.2.1-rc.5`**（Windows 11 桌面版）。两个版本上都实际跑过。
+- **作者实测：DSH `0.2.0-rc.2`（开发环境）与 `0.2.1-rc.5`**（Windows 11 桌面版，完整插件栈、真实浏览器、0 报错）。
+- **静态核验：DSH `0.2.2-rc.1`** —— 座位 `conversation.session.header.utilities` 仍存在、宿主半边只依赖 `ctx.webServer / ctx.on / ctx.logger`、客户端半边除 `react` 外不 import 任何宿主私有包、`lib/` 可直接被 Node 24 `import` 且导出完好。这属于静态/加载核验，**未做完整交互回归**。
+- **声明的版本范围：`engines.dsh` = `">=0.2.0-0 <0.3.0-0"`** —— 0.2.x 全线（含 rc）放行，`0.3.0` 起（含 `0.3.0-alpha`）默认拒装：没测过的线不假装兼容。确实要在范围外强装，用 `dsh plugin allow-version <name>@<version> <dsh版本>` 逐版本豁免。
 - 仅**桌面版 / 网页版**生效：界面半边注册在 `conversation.session.header.utilities` 座位，只有带对话区的宿主才声明这条座位；headless、tui 等宿主里插件不会激活。
 - 需要 Node.js ≥ 20。
 - 提炼步骤会调用模型，需要在 DSH 里配好可用的模型路由。
 
-> ⚠️ 本插件最初按 DSH `0.2.0-rc.2` 开发，现在也在 `0.2.1-rc.5` 上运行。如果你的 DSH 版本对插件清单有不同要求
-> （比如 `dsh.client` 字段格式），可能需要按你的版本调整 `package.json`。
+> ⚠️ 本插件最初按 DSH `0.2.0-rc.2` 开发，`0.2.1-rc.5` 上复验，`0.2.2-rc.1` 上做过静态核验。
+> 版本范围写在 `package.json` 的 `engines.dsh`，DSH 安装器会按它校验（`0.3.0` 起拒装）；
+> 如果你的 DSH 版本对插件清单有不同要求（比如 `dsh.client` 字段格式），仍可能需要按你的版本调整 `package.json`。
 
 ### 与其他插件的兼容性
 
@@ -305,7 +308,7 @@ list slot "..." already has an entry with id "..." (registered by ...)
 
 - **不同 DSH 版本的座位名可能不同。** `conversation.session.header.utilities` 是 DSH `0.2.0-rc.2` 的座位名。如果你的 DSH 版本没有这条座位，插件界面半边**不会报错，但也不会显示** —— 宿主半边（提炼、路由、回收站）仍然正常工作。
 - **我没有在所有 DSH 版本上测试过。** 本插件只在 DSH `0.2.0-rc.2` 与 `0.2.1-rc.5`（Windows 11 桌面版）验证过 —— 完整插件栈、真实浏览器、0 报错。如果你装了之后发现问题，欢迎提 Issue 并附上你的 DSH 版本号。
-- **没有声明版本约束。** 我没找到 DSH 官方的插件规范文档，所以 `package.json` 里没有写 `dsh` 的版本范围。如果你的版本装载失败，多半是清单字段格式差异，按你的版本调整即可。
+- **版本范围已声明，但不是全版本承诺。** `package.json` 里写的是 `engines.dsh = ">=0.2.0-0 <0.3.0-0"`：DSH 的安装器读的就是这个字段（`engines.dsh` 优先于 `peerDependencies` 里的 `@deepseek-ai/dsh*`），范围外会直接拒装，而不是装上去再静默出错。`0.2.x` 内我按上面的实测与核验范围负责；`0.3.0` 起请先自己跑一遍再放宽。
 
 ---
 

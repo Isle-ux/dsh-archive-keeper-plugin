@@ -312,17 +312,27 @@ plugins). This package **bundles all runtime code** — no extra dependencies to
 
 ### Compatibility
 
-- **Developed against DSH `0.2.0-rc.2`; running and re-verified on DSH `0.2.1-rc.5`**
-  (Windows 11 desktop). Both versions were actually exercised.
+- **Exercised by the author: DSH `0.2.0-rc.2` (development) and `0.2.1-rc.5`**
+  (Windows 11 desktop, full plugin stack, real browser, 0 errors).
+- **Statically verified: DSH `0.2.2-rc.1`** — the `conversation.session.header.utilities` slot still
+  exists, the host half only touches `ctx.webServer / ctx.on / ctx.logger`, the client half imports
+  nothing host-private besides `react`, and `lib/` imports cleanly under Node 24 with intact exports.
+  This is a static/load-time check, **not a full interaction regression**.
+- **Declared range: `engines.dsh = ">=0.2.0-0 <0.3.0-0"`** — all of `0.2.x` (prereleases included)
+  is allowed; `0.3.0` and up (including `0.3.0-alpha`) is refused by default, because an untested
+  line should not pretend to be compatible. To force an install outside the range, exempt one exact
+  version at a time with `dsh plugin allow-version <name>@<version> <dsh-version>`.
 - **Desktop / web only.** The client half registers into the
   `conversation.session.header.utilities` slot, which only hosts with a conversation view
   declare. In headless, TUI and similar hosts the plugin simply does not activate.
 - Requires Node.js ≥ 20.
 - The digest step calls a model, so you need a working model route configured in DSH.
 
-> ⚠️ This plugin was originally developed against DSH `0.2.0-rc.2` and now also runs on `0.2.1-rc.5`. If your DSH version has
-> different requirements for plugin manifests (e.g. the `dsh.client` field format), you may need
-> to adjust `package.json` for your version.
+> ⚠️ This plugin was originally developed against DSH `0.2.0-rc.2`, re-verified on `0.2.1-rc.5`, and
+> statically checked on `0.2.2-rc.1`. The version range lives in `package.json` as `engines.dsh` and
+> the DSH installer enforces it (`0.3.0` and up is refused). If your DSH version has different
+> requirements for plugin manifests (e.g. the `dsh.client` field format), you may still need to
+> adjust `package.json` for your version.
 
 ### Compatibility with other plugins
 
@@ -368,9 +378,11 @@ Keeper — it is mentioned only as an example of what a slot conflict looks like
 - **This plugin has not been tested across all DSH versions.** It was verified only on DSH
   `0.2.0-rc.2` and `0.2.1-rc.5` (Windows 11 desktop) — full plugin stack, real browser, 0 errors. If you hit a
   problem, please open an Issue with your DSH version number.
-- **No version constraint is declared.** I could not find official DSH plugin-spec documentation,
-  so `package.json` carries no `dsh` version range. If loading fails on your version, it is most
-  likely a manifest field difference — adjust it for your version.
+- **A version range is declared, but it is not an all-version promise.** `package.json` carries
+  `engines.dsh = ">=0.2.0-0 <0.3.0-0"`, which is the field the DSH installer actually reads
+  (`engines.dsh` wins over any `@deepseek-ai/dsh*` peer). Outside the range the install is refused
+  outright instead of failing silently at runtime. Inside `0.2.x` I stand behind the checks above;
+  from `0.3.0` on, widen the range only after running it yourself.
 
 ---
 
