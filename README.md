@@ -87,6 +87,17 @@ DSH 的「归档」只改标记、不动磁盘。时间一长，`$DSH_HOME/sessi
 
 ## 更新日志
 
+### v1.4.1
+
+**只动元数据和文档：声明 DSH 版本范围，运行代码零改动。**
+
+1. **`package.json` 增加 `engines.dsh = ">=0.2.0-0 <0.3.0-0"`。**
+   DSH 的安装器读的就是这个字段：范围外直接拒装，而不是装上去之后再静默出错。
+   `0.2.x`（含 rc）全线放行，`0.3.0` 起（含 `0.3.0-alpha`）一律拒绝；确实要强装，
+   用 `dsh plugin allow-version` 按「插件@版本 + dsh 版本」逐对豁免。
+2. **README 的兼容性一节改成三层：** 作者实测（`0.2.0-rc.2` / `0.2.1-rc.5`）、静态核验
+   （`0.2.2-rc.1`）、声明的版本范围；并删掉旧版那句「没有声明版本约束」。
+
 ### v1.4.0
 
 **核心变化：提炼改成「一轮一条」，修掉自动触发的一处记账 bug。**
@@ -244,7 +255,7 @@ npm i git+https://github.com/Isle-ux/dsh-archive-keeper-plugin.git --registry=ht
 `dsh-archive-keeper-<版本>.tgz`，然后本地安装：
 
 ```bash
-npm i ./dsh-archive-keeper-1.4.0.tgz
+npm i ./dsh-archive-keeper-1.4.1.tgz
 ```
 
 这种方式不依赖 GitHub 连通性，网络不好时最稳。
@@ -252,8 +263,8 @@ npm i ./dsh-archive-keeper-1.4.0.tgz
 同一个 Release 里附有 `.sha256` 校验和，可用来核对下载是否完整：
 
 ```bash
-sha256sum -c dsh-archive-keeper-1.4.0.tgz.sha256   # Linux / macOS
-certutil -hashfile dsh-archive-keeper-1.4.0.tgz SHA256   # Windows
+sha256sum -c dsh-archive-keeper-1.4.1.tgz.sha256   # Linux / macOS
+certutil -hashfile dsh-archive-keeper-1.4.1.tgz SHA256   # Windows
 ```
 
 ### 方式三：克隆源码

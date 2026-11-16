@@ -106,6 +106,19 @@ archive list (recovery falls back to DSH's own `workspace.json` backup).
 
 ## Changelog
 
+### v1.4.1
+
+**Metadata and docs only — the runtime code is untouched.**
+
+1. **`package.json` now declares `engines.dsh = ">=0.2.0-0 <0.3.0-0"`.**
+   This is the field the DSH installer reads: outside the range the install is refused outright
+   instead of failing silently later. All of `0.2.x` (prereleases included) is allowed; `0.3.0` and
+   up (including `0.3.0-alpha`) is refused. To force an install, exempt one exact
+   plugin@version / dsh-version pair at a time with `dsh plugin allow-version`.
+2. **The README compatibility section is now three layers:** what the author exercised
+   (`0.2.0-rc.2` / `0.2.1-rc.5`), what was statically verified (`0.2.2-rc.1`), and the declared range;
+   the old "no version constraint is declared" paragraph is gone.
+
 ### v1.4.0
 
 **One session per run, plus a fix for a bookkeeping bug in the automatic trigger.**
@@ -286,7 +299,7 @@ Grab `dsh-archive-keeper-<version>.tgz` from the
 locally:
 
 ```bash
-npm i ./dsh-archive-keeper-1.4.0.tgz
+npm i ./dsh-archive-keeper-1.4.1.tgz
 ```
 
 This route does not depend on GitHub connectivity, so it is the most reliable when the network
@@ -295,8 +308,8 @@ is unstable.
 Each release also ships a `.sha256` checksum so you can confirm the download is intact:
 
 ```bash
-sha256sum -c dsh-archive-keeper-1.4.0.tgz.sha256        # Linux / macOS
-certutil -hashfile dsh-archive-keeper-1.4.0.tgz SHA256  # Windows
+sha256sum -c dsh-archive-keeper-1.4.1.tgz.sha256        # Linux / macOS
+certutil -hashfile dsh-archive-keeper-1.4.1.tgz SHA256  # Windows
 ```
 
 ### Option 3: clone the source
