@@ -1,6 +1,6 @@
 {
   "name": "dsh-archive-keeper",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "归档守护：DSH 会话归档后**自动**提炼要点，并在对话头部加一个「归档守护」视图，由你自己决定每条归档的去留（保留原文 / 只留摘要 / 彻底删除，删除可恢复）。提炼失败会自动重试，重试用尽后可在「提炼失败」里一键删除。仅桌面版 / 网页版生效。",
   "type": "module",
   "main": "lib/index.js",
@@ -39,7 +39,8 @@
     "url": "https://github.com/Isle-ux/dsh-archive-keeper-plugin/issues"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20",
+    "dsh": ">=0.2.0-0 <0.3.0-0"
   },
   "dsh": {
     "bundle": {
